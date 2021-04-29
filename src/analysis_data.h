@@ -72,6 +72,7 @@ typedef struct
 	
 	unsigned int sample_timestamp;		/*unit: us*/
 	unsigned int data_ready_timestamp;	/*unit: us*/
+    double utc_timestamp;
 }protocol_info_t;
 
 #pragma pack()

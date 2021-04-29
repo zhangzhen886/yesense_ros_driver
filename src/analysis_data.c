@@ -4,6 +4,7 @@
 //#include "xxx.h"
 #include <stddef.h>
 #include "analysis_data.h"
+#include <stdio.h>
 
 /*------------------------------------------------MARCOS define------------------------------------------------*/
 #define PROTOCOL_FIRST_BYTE			(unsigned char)0x59
@@ -33,6 +34,7 @@
 #define UTC_ID					(unsigned char)0x50
 #define SAMPLE_TIMESTAMP_ID		(unsigned char)0x51
 #define DATA_READY_TIMESTAMP_ID	(unsigned char)0x52
+#define UTC_TIMESTAMP_ID	    (unsigned char)0x53
 #define LOCATION_ID				(unsigned char)0x60
 #define SPEED_ID				(unsigned char)0x70
 
@@ -46,6 +48,7 @@
 #define UTC_DATA_LEN					(unsigned char)11
 #define SAMPLE_TIMESTAMP_DATA_LEN		(unsigned char)4
 #define DATA_READY_TIMESTAMP_DATA_LEN	(unsigned char)4
+#define UTC_TIMESTAMP_DATA_LEN	        (unsigned char)8
 #define LOCATION_DATA_LEN				(unsigned char)12
 #define SPEED_DATA_LEN          		(unsigned char)12
 
@@ -227,8 +230,17 @@ unsigned char check_data_len_by_id(unsigned char id, unsigned char len, unsigned
 				ret = (unsigned char)0x00;
 			}
 		}
-		break;		
-		
+		break;
+
+        case UTC_TIMESTAMP_ID:
+        {
+            if (UTC_TIMESTAMP_DATA_LEN == len) {
+                ret = (unsigned char)0x01;
+                g_output_info.utc_timestamp = *((double *)data);
+            } else {
+                ret = (unsigned char)0x00;
+            }
+        }
 		default:
 		break;
 	}
@@ -268,6 +280,7 @@ int analysis_data(unsigned char *data, short len)
 		/*further check*/
 		header = (output_data_header_t *)data;
 		payload_len = header->len;
+        // printf("load_len: %d\n", payload_len);
 
 		if(payload_len + PROTOCOL_MIN_LEN > len)
 		{
@@ -289,6 +302,7 @@ int analysis_data(unsigned char *data, short len)
 		{
 			payload = (payload_data_t *)(data + pos);
 			ret = check_data_len_by_id(payload->data_id, payload->data_len, (unsigned char *)payload + 2);
+            // printf("ID: %X, Len: %d\n", payload->data_id, payload->data_len);
 			if((unsigned char)0x01 == ret)
 			{
 				pos += payload->data_len + sizeof(payload_data_t);
