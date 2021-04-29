@@ -10,10 +10,21 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   serial
   std_msgs
+  sensor_msgs
   std_srvs
   tf
 )
 
+## Generate messages in the 'msg' folder
+add_message_files(FILES
+  Imu_withSync.msg
+  )
+
+## Generate added messages and services with any dependencies listed here
+generate_messages(DEPENDENCIES
+  std_msgs
+  sensor_msgs
+  )
 
 ###################################
 ## catkin specific configuration ##

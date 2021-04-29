@@ -6,6 +6,7 @@
 #include <sensor_msgs/Temperature.h>
 #include <std_msgs/String.h>
 #include <std_srvs/Empty.h>
+#include <yesense_imu/Imu_withSync.h>
 #include <string>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -22,7 +23,7 @@ enum PARSE_STATES {
 
 sensor_msgs::Imu g_imu;
 
-void publish_imu(const ros::Publisher &imu_pub, const ros::Publisher &imu_pose_pub,
+void publish_imu(const ros::Publisher &imu_pub, const ros::Publisher &imu_sync_pub, const ros::Publisher &imu_pose_pub,
                  const protocol_info_t &imu_data) {
   // publish imu message
   g_imu.header.stamp = ros::Time::now();
@@ -41,6 +42,14 @@ void publish_imu(const ros::Publisher &imu_pub, const ros::Publisher &imu_pose_p
   g_imu.linear_acceleration.z = imu_data.accel_z;
 
   imu_pub.publish(g_imu);
+
+  yesense_imu::Imu_withSync imu_sync_msg;
+  imu_sync_msg.header = g_imu.header;
+  imu_sync_msg.angular_velocity = g_imu.angular_velocity;
+  imu_sync_msg.linear_acceleration = g_imu.linear_acceleration;
+  imu_sync_msg.orientation = g_imu.orientation;
+  imu_sync_msg.hard_time = ros::Time(imu_data.utc_timestamp);
+  imu_sync_pub.publish(imu_sync_msg);
 
   geometry_msgs::PoseStamped pose;
   pose.header.frame_id = "imu_link";
@@ -80,7 +89,7 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle private_node_handle("~");
 	private_node_handle.param<std::string>("port", port, "/dev/ttyUSB0");
-	private_node_handle.param<int>("baud_rate", baud_rate, 460800);
+	private_node_handle.param<int>("baud_rate", baud_rate, 460800);//460800
 	private_node_handle.param<std::string>("tf_parent_frame_id", tf_parent_frame_id, "imu_base");
 	private_node_handle.param<std::string>("tf_frame_id", tf_frame_id, "imu_link");
 	private_node_handle.param<std::string>("frame_id", frame_id, "imu_link");
@@ -92,6 +101,7 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle nh("imu");
 	ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>("data", 100);
+	ros::Publisher imu_sync_pub = nh.advertise<yesense_imu::Imu_withSync>("data_withSync", 100);
 	ros::Publisher imu_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("pose", 100);
 
 	ros::Rate r(200); // 200 hz
@@ -191,7 +201,10 @@ int main(int argc, char **argv)
 								}
 								else
 								{
-									publish_imu(imu_pub, imu_pose_pub, g_output_info);
+									publish_imu(imu_pub, imu_sync_pub, imu_pose_pub, g_output_info);
+									unsigned short tid = (unsigned char)sentence.at(2) + ((unsigned char)sentence.at(3) << 8);
+                                    ROS_INFO("TID: %d", tid);
+                                    ROS_INFO("UTC Time: %.3f", g_output_info.utc_timestamp);
 								}
 								
 								state = FIND_HEAD_0;
